@@ -18,6 +18,12 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        // Medical variants
+        medical: "bg-gradient-medical text-primary-foreground hover:shadow-medical transition-all duration-300",
+        urgent: "bg-urgent text-urgent-foreground hover:bg-urgent/90 shadow-urgent",
+        oncology: "bg-oncology text-oncology-foreground hover:bg-oncology/90",
+        legal: "bg-legal text-legal-foreground hover:bg-legal/90",
+        success: "bg-success text-success-foreground hover:bg-success/90",
       },
       size: {
         default: "h-10 px-4 py-2",

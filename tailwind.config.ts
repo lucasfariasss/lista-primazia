@@ -26,7 +26,9 @@ export default {
 				foreground: 'hsl(var(--foreground))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
-					foreground: 'hsl(var(--primary-foreground))'
+					foreground: 'hsl(var(--primary-foreground))',
+					light: 'hsl(var(--primary-light))',
+					dark: 'hsl(var(--primary-dark))'
 				},
 				secondary: {
 					DEFAULT: 'hsl(var(--secondary))',
@@ -51,6 +53,27 @@ export default {
 				card: {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
+				},
+				// Medical status colors
+				urgent: {
+					DEFAULT: 'hsl(var(--urgent))',
+					foreground: 'hsl(var(--urgent-foreground))'
+				},
+				oncology: {
+					DEFAULT: 'hsl(var(--oncology))',
+					foreground: 'hsl(var(--oncology-foreground))'
+				},
+				legal: {
+					DEFAULT: 'hsl(var(--legal))',
+					foreground: 'hsl(var(--legal-foreground))'
+				},
+				warning: {
+					DEFAULT: 'hsl(var(--warning))',
+					foreground: 'hsl(var(--warning-foreground))'
+				},
+				success: {
+					DEFAULT: 'hsl(var(--success))',
+					foreground: 'hsl(var(--success-foreground))'
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
@@ -88,7 +111,18 @@ export default {
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'pulse-medical': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+			},
+			boxShadow: {
+				'medical': 'var(--shadow-medical)',
+				'card-medical': 'var(--shadow-card)',
+				'urgent': 'var(--shadow-urgent)'
+			},
+			backgroundImage: {
+				'gradient-medical': 'var(--gradient-medical)',
+				'gradient-priority': 'var(--gradient-priority)',
+				'gradient-light': 'var(--gradient-light)'
 			}
 		}
 	},

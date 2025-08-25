@@ -15,6 +15,13 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
+        // Medical priority badges
+        urgent: "border-transparent bg-urgent text-urgent-foreground",
+        oncology: "border-transparent bg-oncology text-oncology-foreground",
+        legal: "border-transparent bg-legal text-legal-foreground",
+        success: "border-transparent bg-success text-success-foreground",
+        warning: "border-transparent bg-warning text-warning-foreground",
+        priority: "bg-gradient-priority text-white font-bold",
       },
     },
     defaultVariants: {
