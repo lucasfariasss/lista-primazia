@@ -14,36 +14,7 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
-
-// Mock data para autocompletes
-const mockEspecialidades = [
-  { id: "e1", nome: "Ortopedia", codigo: "ORTOP" },
-  { id: "e2", nome: "Cirurgia Geral", codigo: "CIRGE" },
-  { id: "e3", nome: "Oncologia", codigo: "ONCOL" },
-  { id: "e4", nome: "Cardiologia", codigo: "CARDI" }
-]
-
-const mockProcedimentos = [
-  { id: "p1", nome: "Artroplastia total do joelho", codigo: "40816015", especialidadeId: "e1" },
-  { id: "p2", nome: "Artroscopia de joelho", codigo: "40816020", especialidadeId: "e1" },
-  { id: "p3", nome: "Colecistectomia por videolaparoscopia", codigo: "40601070", especialidadeId: "e2" },
-  { id: "p4", nome: "Herniorrafia inguinal", codigo: "40601030", especialidadeId: "e2" },
-  { id: "p5", nome: "Ressecção de tumor colorretal", codigo: "40901070", especialidadeId: "e3" },
-  { id: "p6", nome: "Revascularização do miocárdio", codigo: "40701020", especialidadeId: "e4" }
-]
-
-const mockPacientes = [
-  { id: "pac1", nome: "João Silva Santos", prontuario: "001234", cpf: "123.456.789-00" },
-  { id: "pac2", nome: "Maria Oliveira Costa", prontuario: "005678", cpf: "987.654.321-00" },
-  { id: "pac3", nome: "Carlos Eduardo Lima", prontuario: "009876", cpf: "456.789.123-00" }
-]
-
-const mockMedicos = [
-  { id: "med1", nome: "Dr. João Oliveira", crm: "12345", especialidades: ["e1"] },
-  { id: "med2", nome: "Dra. Maria Santos", crm: "23456", especialidades: ["e2"] },
-  { id: "med3", nome: "Dr. Carlos Lima", crm: "34567", especialidades: ["e4"] },
-  { id: "med4", nome: "Dra. Ana Costa", crm: "45678", especialidades: ["e3"] }
-]
+import { useEspecialidades, usePacientes, useProcedimentos, useProfissionais, formatEspecialidade, formatPaciente, formatProcedimento, formatProfissional } from "@/hooks/useSupabaseData"
 
 const situacoes = [
   { value: "CA", label: "Consulta Agendada" },
@@ -71,6 +42,18 @@ export default function NovaEntrada() {
   const navigate = useNavigate()
   const { toast } = useToast()
   
+  // Buscar dados do Supabase
+  const { especialidades: especialidadesDB, loading: loadingEspecialidades } = useEspecialidades()
+  const { pacientes: pacientesDB, loading: loadingPacientes } = usePacientes()
+  const { procedimentos: procedimentosDB, loading: loadingProcedimentos } = useProcedimentos()
+  const { profissionais: profissionaisDB, loading: loadingProfissionais } = useProfissionais()
+  
+  // Converter dados do Supabase para o formato esperado
+  const especialidades = especialidadesDB.map(formatEspecialidade)
+  const pacientes = pacientesDB.map(formatPaciente)
+  const procedimentos = procedimentosDB.map(formatProcedimento)
+  const medicos = profissionaisDB.map(formatProfissional)
+  
   const [formData, setFormData] = useState<FormData>({
     especialidadeId: "",
     procedimentoId: "",
@@ -88,9 +71,12 @@ export default function NovaEntrada() {
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Filtrar procedimentos pela especialidade selecionada
-  const procedimentosFiltrados = mockProcedimentos.filter(
+  const procedimentosFiltrados = procedimentos.filter(
     proc => proc.especialidadeId === formData.especialidadeId
   )
+
+  // Loading state para dados do Supabase
+  const isLoadingData = loadingEspecialidades || loadingPacientes || loadingProcedimentos || loadingProfissionais
 
   // Validação do formulário
   const validarFormulario = (): boolean => {
@@ -104,7 +90,7 @@ export default function NovaEntrada() {
 
     // Validar se procedimento é compatível com especialidade
     if (formData.especialidadeId && formData.procedimentoId) {
-      const procedimento = mockProcedimentos.find(p => p.id === formData.procedimentoId)
+      const procedimento = procedimentos.find(p => p.id === formData.procedimentoId)
       if (procedimento && procedimento.especialidadeId !== formData.especialidadeId) {
         newErrors.procedimentoId = "Procedimento não é compatível com a especialidade selecionada"
       }
@@ -154,6 +140,21 @@ export default function NovaEntrada() {
     setErrors(prev => ({ ...prev, especialidadeId: "", procedimentoId: "" }))
   }
 
+  if (isLoadingData) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-muted rounded w-1/3 mb-4"></div>
+          <div className="grid gap-6">
+            <div className="h-48 bg-muted rounded"></div>
+            <div className="h-32 bg-muted rounded"></div>
+            <div className="h-32 bg-muted rounded"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
@@ -194,7 +195,7 @@ export default function NovaEntrada() {
                   <SelectValue placeholder="Selecione a especialidade" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockEspecialidades.map(esp => (
+                  {especialidades.map(esp => (
                     <SelectItem key={esp.id} value={esp.id}>
                       {esp.nome} ({esp.codigo})
                     </SelectItem>
@@ -251,7 +252,7 @@ export default function NovaEntrada() {
                   <SelectValue placeholder="Selecione o paciente" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockPacientes.map(pac => (
+                  {pacientes.map(pac => (
                     <SelectItem key={pac.id} value={pac.id}>
                       {pac.nome} - {pac.prontuario}
                     </SelectItem>
@@ -274,7 +275,7 @@ export default function NovaEntrada() {
                   <SelectValue placeholder="Selecione o médico responsável" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockMedicos.map(med => (
+                  {medicos.map(med => (
                     <SelectItem key={med.id} value={med.id}>
                       {med.nome} - CRM {med.crm}
                     </SelectItem>

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,58 +14,28 @@ import {
 } from "@/components/ui/table"
 import { Search, Eye, Stethoscope } from "lucide-react"
 import { Especialidade } from "@/types/sgfc"
-
-// Mock data para especialidades (vindas do AGHUx)
-const mockEspecialidades: Especialidade[] = [
-  {
-    id: "e1",
-    codigo: "ORTOP",
-    name: "Ortopedia e Traumatologia",
-    description: "Especialidade médica que cuida do sistema músculo-esquelético"
-  },
-  {
-    id: "e2", 
-    codigo: "CARDIO",
-    name: "Cardiologia",
-    description: "Especialidade que trata do sistema cardiovascular"
-  },
-  {
-    id: "e3",
-    codigo: "ONCO",
-    name: "Oncologia",
-    description: "Especialidade dedicada ao estudo e tratamento de neoplasias"
-  },
-  {
-    id: "e4",
-    codigo: "NEURO",
-    name: "Neurocirurgia",
-    description: "Especialidade cirúrgica do sistema nervoso"
-  },
-  {
-    id: "e5",
-    codigo: "GASTRO",
-    name: "Gastroenterologia",
-    description: "Especialidade que trata do sistema digestório"
-  },
-  {
-    id: "e6",
-    codigo: "URO",
-    name: "Urologia", 
-    description: "Especialidade que cuida do sistema urinário e reprodutor masculino"
-  }
-]
+import { useEspecialidades, formatEspecialidade } from "@/hooks/useSupabaseData"
 
 export default function Especialidades() {
   const navigate = useNavigate()
   const [busca, setBusca] = useState("")
-  const [especialidadesFiltradas, setEspecialidades] = useState(mockEspecialidades)
+  
+  // Buscar dados do Supabase
+  const { especialidades: especialidadesDB, loading } = useEspecialidades()
+  const especialidades = especialidadesDB.map(formatEspecialidade)
+  
+  const [especialidadesFiltradas, setEspecialidades] = useState<typeof especialidades>([])
+
+  // Atualizar especialidades filtradas quando os dados chegarem
+  useEffect(() => {
+    setEspecialidades(especialidades)
+  }, [especialidades])
 
   const handleBusca = (termo: string) => {
     setBusca(termo)
-    const filtradas = mockEspecialidades.filter(esp => 
-      esp.name.toLowerCase().includes(termo.toLowerCase()) ||
-      esp.codigo.toLowerCase().includes(termo.toLowerCase()) ||
-      esp.description?.toLowerCase().includes(termo.toLowerCase())
+    const filtradas = especialidades.filter(esp => 
+      esp.nome.toLowerCase().includes(termo.toLowerCase()) ||
+      esp.codigo.toLowerCase().includes(termo.toLowerCase())
     )
     setEspecialidades(filtradas)
   }
@@ -73,6 +43,21 @@ export default function Especialidades() {
   const handleVerNaLEC = (especialidade: Especialidade) => {
     // Navegar para o Dashboard LEC com filtro aplicado
     navigate(`/?especialidade=${especialidade.id}&nome=${especialidade.name}`)
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-muted rounded w-1/3 mb-4"></div>
+          <div className="grid gap-6">
+            <div className="h-48 bg-muted rounded"></div>
+            <div className="h-32 bg-muted rounded"></div>
+            <div className="h-32 bg-muted rounded"></div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

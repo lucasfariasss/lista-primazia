@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,82 +14,45 @@ import {
 } from "@/components/ui/table"
 import { Search, Eye, Activity, Stethoscope } from "lucide-react"
 import { Procedimento } from "@/types/sgfc"
-
-// Mock data para procedimentos (vindos do AGHUx)
-const mockProcedimentos: Procedimento[] = [
-  {
-    id: "pr1",
-    codigo: "40816015",
-    name: "Artroplastia total do joelho",
-    especialidadeId: "e1",
-    description: "Substituição total da articulação do joelho por prótese"
-  },
-  {
-    id: "pr2",
-    codigo: "40901017",
-    name: "Revascularização miocárdica",
-    especialidadeId: "e2",
-    description: "Cirurgia de ponte de safena para revascularização do coração"
-  },
-  {
-    id: "pr3",
-    codigo: "40814018",
-    name: "Mastectomia radical",
-    especialidadeId: "e3",
-    description: "Cirurgia para remoção completa da mama"
-  },
-  {
-    id: "pr4",
-    codigo: "40701019",
-    name: "Craniotomia para tumor",
-    especialidadeId: "e4",
-    description: "Abertura do crânio para remoção de tumor cerebral"
-  },
-  {
-    id: "pr5",
-    codigo: "40501020",
-    name: "Gastrectomia total",
-    especialidadeId: "e5",
-    description: "Remoção completa do estômago"
-  },
-  {
-    id: "pr6",
-    codigo: "40301021",
-    name: "Prostatectomia radical",
-    especialidadeId: "e6",
-    description: "Remoção completa da próstata"
-  }
-]
-
-// Mock de especialidades para mostrar o nome
-const especialidades: Record<string, string> = {
-  "e1": "Ortopedia",
-  "e2": "Cardiologia", 
-  "e3": "Oncologia",
-  "e4": "Neurocirurgia",
-  "e5": "Gastroenterologia",
-  "e6": "Urologia"
-}
+import { useProcedimentos, useEspecialidades, formatProcedimento, formatEspecialidade } from "@/hooks/useSupabaseData"
 
 export default function Procedimentos() {
   const navigate = useNavigate()
   const [busca, setBusca] = useState("")
-  const [procedimentosFiltrados, setProcedimentos] = useState(mockProcedimentos)
+  
+  // Buscar dados do Supabase
+  const { procedimentos: procedimentosDB, loading: loadingProc } = useProcedimentos()
+  const { especialidades: especialidadesDB, loading: loadingEsp } = useEspecialidades()
+  
+  const procedimentos = procedimentosDB.map(formatProcedimento)
+  const especialidades = especialidadesDB.map(formatEspecialidade)
+  const [procedimentosFiltrados, setProcedimentos] = useState<typeof procedimentos>([])
+
+  // Criar mapa de especialidades para lookup
+  const especialidadesMap = especialidades.reduce((acc, esp) => {
+    acc[esp.id] = esp.nome
+    return acc
+  }, {} as Record<string, string>)
+
+  const loading = loadingProc || loadingEsp
+
+  useEffect(() => {
+    setProcedimentos(procedimentos)
+  }, [procedimentos])
 
   const handleBusca = (termo: string) => {
     setBusca(termo)
-    const filtrados = mockProcedimentos.filter(proc => 
-      proc.name.toLowerCase().includes(termo.toLowerCase()) ||
+    const filtrados = procedimentos.filter(proc => 
+      proc.nome.toLowerCase().includes(termo.toLowerCase()) ||
       proc.codigo.includes(termo) ||
-      proc.description?.toLowerCase().includes(termo.toLowerCase()) ||
-      especialidades[proc.especialidadeId]?.toLowerCase().includes(termo.toLowerCase())
+      especialidadesMap[proc.especialidadeId]?.toLowerCase().includes(termo.toLowerCase())
     )
     setProcedimentos(filtrados)
   }
 
-  const handleVerNaLEC = (procedimento: Procedimento) => {
+  const handleVerNaLEC = (procedimento: any) => {
     // Navegar para o Dashboard LEC com filtro aplicado
-    navigate(`/?procedimento=${procedimento.id}&nome=${procedimento.name}`)
+    navigate(`/?procedimento=${procedimento.id}&nome=${procedimento.nome}`)
   }
 
   const getComplexityBadge = (codigo: string) => {
@@ -185,12 +148,12 @@ export default function Procedimentos() {
                         </Badge>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {procedimento.name}
+                        {procedimento.nome}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Stethoscope className="h-4 w-4 text-primary" />
-                          <span>{especialidades[procedimento.especialidadeId]}</span>
+                          <span>{especialidadesMap[procedimento.especialidadeId]}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -199,8 +162,8 @@ export default function Procedimentos() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground max-w-md">
-                        <p className="truncate" title={procedimento.description}>
-                          {procedimento.description}
+                        <p className="truncate" title={procedimento.nome}>
+                          {procedimento.nome}
                         </p>
                       </TableCell>
                       <TableCell>

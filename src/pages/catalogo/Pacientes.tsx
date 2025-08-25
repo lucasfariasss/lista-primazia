@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,54 +16,28 @@ import { Search, Eye, Users, Shield } from "lucide-react"
 import { Patient } from "@/types/sgfc"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-
-// Mock data para pacientes (vindos do AGHUx)
-const mockPacientes: Patient[] = [
-  {
-    id: "p1",
-    prontuario: "001234",
-    name: "Maria Silva Santos",
-    cpf: "123.456.789-00",
-    birthDate: "1965-03-15",
-    phone: "(83) 99999-1234"
-  },
-  {
-    id: "p2",
-    prontuario: "002345",
-    name: "José Carlos Lima",
-    cpf: "987.654.321-00", 
-    birthDate: "1958-08-22",
-    phone: "(83) 98888-5678"
-  },
-  {
-    id: "p3",
-    prontuario: "003456",
-    name: "Ana Paula Fernandes",
-    cpf: "456.789.123-00",
-    birthDate: "1972-11-08",
-    phone: "(83) 97777-9012"
-  },
-  {
-    id: "p4",
-    prontuario: "004567", 
-    name: "Carlos Roberto Silva",
-    cpf: "321.654.987-00",
-    birthDate: "1980-05-12",
-    phone: "(83) 96666-3456"
-  }
-]
+import { usePacientes, formatPaciente } from "@/hooks/useSupabaseData"
 
 export default function Pacientes() {
   const navigate = useNavigate()
   const [busca, setBusca] = useState("")
-  const [pacientesFiltrados, setPacientes] = useState(mockPacientes)
+  
+  // Buscar dados do Supabase
+  const { pacientes: pacientesDB, loading } = usePacientes()
+  const pacientes = pacientesDB.map(formatPaciente)
+  
+  const [pacientesFiltrados, setPacientes] = useState<typeof pacientes>([])
+
+  // Atualizar pacientes filtrados quando os dados chegarem
+  useEffect(() => {
+    setPacientes(pacientes)
+  }, [pacientes])
 
   const handleBusca = (termo: string) => {
     setBusca(termo)
-    const filtrados = mockPacientes.filter(paciente => 
-      paciente.name.toLowerCase().includes(termo.toLowerCase()) ||
-      paciente.prontuario.includes(termo) ||
-      paciente.cpf?.includes(termo)
+    const filtrados = pacientes.filter(paciente => 
+      paciente.nome.toLowerCase().includes(termo.toLowerCase()) ||
+      paciente.prontuario.includes(termo)
     )
     setPacientes(filtrados)
   }
