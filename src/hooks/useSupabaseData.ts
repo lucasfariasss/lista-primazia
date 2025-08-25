@@ -42,6 +42,8 @@ export function useEspecialidades() {
           .from('especialidades')
           .select('*')
           .order('NOME_ESPECIALIDADE')
+        
+        console.log('Especialidades query result:', { data, error })
 
         if (error) {
           throw error
@@ -75,8 +77,10 @@ export function usePacientes() {
         setLoading(true)
         const { data, error } = await supabase
           .from('pacientes')
-          .select('*')
+          .select('*')  
           .order('NOME_PACIENTE')
+        
+        console.log('Pacientes query result:', { data, error })
 
         if (error) {
           throw error
@@ -112,6 +116,8 @@ export function useProcedimentos() {
           .from('procedimentos')
           .select('*')
           .order('PROCEDIMENTO')
+        
+        console.log('Procedimentos query result:', { data, error })
 
         if (error) {
           throw error
@@ -147,6 +153,8 @@ export function useProfissionais() {
           .from('profissionais')
           .select('*')
           .order('NOME_PROFISSIONAL')
+        
+        console.log('Profissionais query result:', { data, error })
 
         if (error) {
           throw error
@@ -201,6 +209,7 @@ export const formatProcedimento = (proc: ProcedimentoDB) => ({
 export const formatProfissional = (prof: ProfissionalDB) => ({
   id: prof.MATRICULA.toString(),
   nome: prof.NOME_PROFISSIONAL || '',
+  name: prof.NOME_PROFISSIONAL || '',
   crm: prof.MATRICULA.toString(),
   especialidades: [] // Por enquanto vazio, pois não temos a relação no banco
 })

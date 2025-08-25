@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,78 +12,30 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Search, Eye, User, Stethoscope } from "lucide-react"
+import { Search, Eye, User } from "lucide-react"
 import { Medico } from "@/types/sgfc"
-
-// Mock data para médicos (vindos do AGHUx)
-const mockMedicos: Medico[] = [
-  {
-    id: "m1",
-    crm: "12345",
-    name: "Dr. João Oliveira Santos",
-    especialidades: ["e1", "e4"] // Ortopedia e Neurocirurgia
-  },
-  {
-    id: "m2",
-    crm: "23456",
-    name: "Dra. Ana Cardoso Silva",
-    especialidades: ["e2"] // Cardiologia
-  },
-  {
-    id: "m3",
-    crm: "34567",
-    name: "Dr. Carlos Oncologista Lima",
-    especialidades: ["e3"] // Oncologia
-  },
-  {
-    id: "m4",
-    crm: "45678",
-    name: "Dra. Maria Neurocirurgiã Costa",
-    especialidades: ["e4"] // Neurocirurgia
-  },
-  {
-    id: "m5",
-    crm: "56789",
-    name: "Dr. Pedro Gastroenterologista",
-    especialidades: ["e5", "e3"] // Gastro e Oncologia
-  },
-  {
-    id: "m6",
-    crm: "67890",
-    name: "Dr. Roberto Urologista Mendes",
-    especialidades: ["e6"] // Urologia
-  },
-  {
-    id: "m7",
-    crm: "78901",
-    name: "Dra. Fernanda Ortopedista Alves",
-    especialidades: ["e1"] // Ortopedia
-  }
-]
-
-// Mock de especialidades para mostrar o nome
-const especialidades: Record<string, string> = {
-  "e1": "Ortopedia",
-  "e2": "Cardiologia", 
-  "e3": "Oncologia",
-  "e4": "Neurocirurgia",
-  "e5": "Gastroenterologia",
-  "e6": "Urologia"
-}
+import { useProfissionais, formatProfissional } from "@/hooks/useSupabaseData"
 
 export default function Medicos() {
   const navigate = useNavigate()
   const [busca, setBusca] = useState("")
-  const [medicosFiltrados, setMedicos] = useState(mockMedicos)
+  
+  // Buscar dados do Supabase
+  const { profissionais: profissionaisDB, loading } = useProfissionais()
+  const medicos = profissionaisDB.map(formatProfissional)
+  
+  const [medicosFiltrados, setMedicos] = useState<typeof medicos>([])
+
+  // Atualizar médicos filtrados quando os dados chegarem
+  useEffect(() => {
+    setMedicos(medicos)
+  }, [medicos])
 
   const handleBusca = (termo: string) => {
     setBusca(termo)
-    const filtrados = mockMedicos.filter(medico => 
-      medico.name.toLowerCase().includes(termo.toLowerCase()) ||
-      medico.crm.includes(termo) ||
-      medico.especialidades.some(espId => 
-        especialidades[espId]?.toLowerCase().includes(termo.toLowerCase())
-      )
+    const filtrados = medicos.filter(medico => 
+      medico.nome.toLowerCase().includes(termo.toLowerCase()) ||
+      medico.crm.includes(termo)
     )
     setMedicos(filtrados)
   }
@@ -93,20 +45,19 @@ export default function Medicos() {
     navigate(`/?medico=${medico.id}&nome=${medico.name}`)
   }
 
-  const getEspecialidadesBadges = (especialidadesIds: string[]) => {
-    return especialidadesIds.map(espId => (
-      <Badge key={espId} variant="secondary" className="text-xs">
-        {especialidades[espId]}
-      </Badge>
-    ))
-  }
-
-  const getStatusBadge = (medicoId: string) => {
-    // Simular status baseado no ID
-    const isActive = parseInt(medicoId.substring(1)) % 2 === 1
-    return isActive ? 
-      <Badge variant="success">Ativo</Badge> : 
-      <Badge variant="outline">Inativo</Badge>
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-muted rounded w-1/3 mb-4"></div>
+          <div className="grid gap-6">
+            <div className="h-48 bg-muted rounded"></div>
+            <div className="h-32 bg-muted rounded"></div>
+            <div className="h-32 bg-muted rounded"></div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -166,33 +117,33 @@ export default function Medicos() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Médicos Ativos</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Médicos</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">
-              {medicosFiltrados.filter((_, i) => (i + 1) % 2 === 1).length}
+            <div className="text-2xl font-bold text-primary">
+              {medicosFiltrados.length}
             </div>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Especialidades Cobertas</CardTitle>
+            <CardTitle className="text-sm font-medium">Registros no Sistema</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">
-              {new Set(medicosFiltrados.flatMap(m => m.especialidades)).size}
+            <div className="text-2xl font-bold text-success">
+              {medicos.length}
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Multiespecialistas</CardTitle>
+          <CardHeader className="pb-2">  
+            <CardTitle className="text-sm font-medium">Filtrados</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-warning">
-              {medicosFiltrados.filter(m => m.especialidades.length > 1).length}
+              {medicosFiltrados.length}
             </div>
           </CardContent>
         </Card>
@@ -211,10 +162,9 @@ export default function Medicos() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>CRM</TableHead>
+                  <TableHead>Matrícula</TableHead>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Especialidades</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Responsável</TableHead>
                   <TableHead className="w-32">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -231,16 +181,11 @@ export default function Medicos() {
                         <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                           <User className="h-4 w-4 text-primary" />
                         </div>
-                        <span className="font-medium">{medico.name}</span>
+                        <span className="font-medium">{medico.nome}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {getEspecialidadesBadges(medico.especialidades)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(medico.id)}
+                    <TableCell className="text-muted-foreground">
+                      {medico.id === medico.crm ? 'Sem responsável' : `Responsável: ${medico.crm}`}
                     </TableCell>
                     <TableCell>
                       <Button
