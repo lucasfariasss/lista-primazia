@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -40,15 +41,16 @@ const mockEntradas: EntradaLEC[] = [
       especialidades: ["e1"]
     },
     dataEntrada: "2024-01-15",
+    prioridade: 'SEM' as const,
+    medidaJudicial: true,
+    situacao: 'PP' as const,
     urgencia: false,
     oncologico: false,
     ordemJudicial: true,
     diasEspera: 45,
     scorePrioridade: 4455, // 45 * 99 (judicial)
     posicao: 1,
-    ativo: true,
-    criadoPor: "nir001",
-    criadoEm: "2024-01-15T08:30:00Z"
+    ativo: true
   },
   {
     id: "2",
@@ -82,15 +84,16 @@ const mockEntradas: EntradaLEC[] = [
       especialidades: ["e2"]
     },
     dataEntrada: "2024-01-20",
+    prioridade: 'BRE' as const,
+    medidaJudicial: false,
+    situacao: 'CNR' as const,
     urgencia: true,
     oncologico: false,
     ordemJudicial: false,
     diasEspera: 40,
     scorePrioridade: 60, // 40 * 1.5 (urgente)
     posicao: 2,
-    ativo: true,
-    criadoPor: "medico001",
-    criadoEm: "2024-01-20T14:15:00Z"
+    ativo: true
   },
   {
     id: "3",
@@ -124,19 +127,21 @@ const mockEntradas: EntradaLEC[] = [
       especialidades: ["e3"]
     },
     dataEntrada: "2024-02-01",
+    prioridade: 'ONC' as const,
+    medidaJudicial: false,
+    situacao: 'AE' as const,
     urgencia: false,
     oncologico: true,
     ordemJudicial: false,
     diasEspera: 28,
     scorePrioridade: 36.4, // 28 * 1.3 (oncológico)
     posicao: 3,
-    ativo: true,
-    criadoPor: "nir002",
-    criadoEm: "2024-02-01T10:45:00Z"
+    ativo: true
   }
 ]
 
 export default function Dashboard() {
+  const navigate = useNavigate()
   const [filters, setFilters] = useState<FilterLEC>({})
   const [filteredEntradas, setFilteredEntradas] = useState(mockEntradas)
 
@@ -244,16 +249,27 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Tabela principal */}
-      <LECTable
-        entradas={filteredEntradas}
-        filters={filters}
-        onEdit={handleEdit}
-        onRemove={handleRemove}
-        onView={handleView}
-        showActions={true}
-        showSensitiveData={true}
-      />
+      {/* Tabela LEC Resumida */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Lista de Espera Cirúrgica
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <LECTable 
+            entradas={mockEntradas.slice(0, 5)} // Mostrar apenas os primeiros 5
+            showActions={false}
+            showSensitiveData={false}
+          />
+          <div className="mt-4 text-center">
+            <Button onClick={() => navigate('/lec/lista-espera')}>
+              Ver Lista Completa
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
