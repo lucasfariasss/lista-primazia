@@ -14,7 +14,13 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
-import { useEspecialidades, usePacientes, useProcedimentos, useProfissionais, formatEspecialidade, formatPaciente, formatProcedimento, formatProfissional } from "@/hooks/useSupabaseData"
+import { 
+  useEspecialidadesSearch, 
+  useProcedimentosSearch, 
+  useProfissionaisSearch 
+} from "@/hooks/useIncrementalData"
+import { AutocompleteSelect } from "@/components/ui/autocomplete-select"
+import { ProntuarioField } from "@/components/lec/ProntuarioField"
 
 const situacoes = [
   { value: "CA", label: "Consulta Agendada" },
@@ -28,7 +34,8 @@ const situacoes = [
 interface FormData {
   especialidadeId: string
   procedimentoId: string
-  pacienteId: string
+  prontuario: string
+  pacienteData: any | null
   medicoId: string
   prioridade: "ONC" | "BRE" | "SEM"
   medidaJudicial: boolean
@@ -42,22 +49,16 @@ export default function NovaEntrada() {
   const navigate = useNavigate()
   const { toast } = useToast()
   
-  // Buscar dados do Supabase
-  const { especialidades: especialidadesDB, loading: loadingEspecialidades } = useEspecialidades()
-  const { pacientes: pacientesDB, loading: loadingPacientes } = usePacientes()
-  const { procedimentos: procedimentosDB, loading: loadingProcedimentos } = useProcedimentos()
-  const { profissionais: profissionaisDB, loading: loadingProfissionais } = useProfissionais()
-  
-  // Converter dados do Supabase para o formato esperado
-  const especialidades = especialidadesDB.map(formatEspecialidade)
-  const pacientes = pacientesDB.map(formatPaciente)
-  const procedimentos = procedimentosDB.map(formatProcedimento)
-  const medicos = profissionaisDB.map(formatProfissional)
+  // Hooks para busca incremental
+  const { result: especialidadesResult, searchEspecialidades } = useEspecialidadesSearch()
+  const { result: procedimentosResult, searchProcedimentos } = useProcedimentosSearch()
+  const { result: profissionaisResult, searchProfissionais } = useProfissionaisSearch()
   
   const [formData, setFormData] = useState<FormData>({
     especialidadeId: "",
     procedimentoId: "",
-    pacienteId: "",
+    prontuario: "",
+    pacienteData: null,
     medicoId: "",
     prioridade: "SEM",
     medidaJudicial: false,
@@ -70,31 +71,16 @@ export default function NovaEntrada() {
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Filtrar procedimentos pela especialidade selecionada
-  const procedimentosFiltrados = procedimentos.filter(
-    proc => proc.especialidadeId === formData.especialidadeId
-  )
-
-  // Loading state para dados do Supabase
-  const isLoadingData = loadingEspecialidades || loadingPacientes || loadingProcedimentos || loadingProfissionais
-
   // Validação do formulário
   const validarFormulario = (): boolean => {
     const newErrors: Record<string, string> = {}
 
     if (!formData.especialidadeId) newErrors.especialidadeId = "Especialidade é obrigatória"
     if (!formData.procedimentoId) newErrors.procedimentoId = "Procedimento é obrigatório"
-    if (!formData.pacienteId) newErrors.pacienteId = "Paciente é obrigatório"
+    if (!formData.prontuario.trim()) newErrors.prontuario = "Prontuário é obrigatório"
+    if (!formData.pacienteData) newErrors.prontuario = "Prontuário deve ser validado"
     if (!formData.situacao) newErrors.situacao = "Situação é obrigatória"
     if (!formData.motivoAlteracao.trim()) newErrors.motivoAlteracao = "Motivo da alteração é obrigatório"
-
-    // Validar se procedimento é compatível com especialidade
-    if (formData.especialidadeId && formData.procedimentoId) {
-      const procedimento = procedimentos.find(p => p.id === formData.procedimentoId)
-      if (procedimento && procedimento.especialidadeId !== formData.especialidadeId) {
-        newErrors.procedimentoId = "Procedimento não é compatível com a especialidade selecionada"
-      }
-    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -138,22 +124,16 @@ export default function NovaEntrada() {
       procedimentoId: "" // Limpar procedimento ao trocar especialidade
     }))
     setErrors(prev => ({ ...prev, especialidadeId: "", procedimentoId: "" }))
+    
+    // Limpar procedimentos ao trocar especialidade
+    searchProcedimentos("", value, 0, true)
   }
 
-  if (isLoadingData) {
-    return (
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-muted rounded w-1/3 mb-4"></div>
-          <div className="grid gap-6">
-            <div className="h-48 bg-muted rounded"></div>
-            <div className="h-32 bg-muted rounded"></div>
-            <div className="h-32 bg-muted rounded"></div>
-          </div>
-        </div>
-      </div>
-    )
+  const handleValidPaciente = (paciente: any) => {
+    setFormData(prev => ({ ...prev, pacienteData: paciente }))
+    setErrors(prev => ({ ...prev, prontuario: "" }))
   }
+
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -187,21 +167,18 @@ export default function NovaEntrada() {
             {/* Especialidade */}
             <div className="space-y-2">
               <Label htmlFor="especialidade">Especialidade *</Label>
-              <Select 
-                value={formData.especialidadeId} 
+              <AutocompleteSelect
+                items={especialidadesResult.items}
+                value={formData.especialidadeId}
                 onValueChange={handleEspecialidadeChange}
-              >
-                <SelectTrigger className={errors.especialidadeId ? "border-destructive" : ""}>
-                  <SelectValue placeholder="Selecione a especialidade" />
-                </SelectTrigger>
-                <SelectContent>
-                  {especialidades.map(esp => (
-                    <SelectItem key={esp.id} value={esp.id}>
-                      {esp.nome} ({esp.codigo})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onSearch={searchEspecialidades}
+                loading={especialidadesResult.loading}
+                hasMore={especialidadesResult.hasMore}
+                error={especialidadesResult.error}
+                placeholder="Selecione a especialidade"
+                searchPlaceholder="Buscar especialidade..."
+                className={errors.especialidadeId ? "border-destructive" : ""}
+              />
               {errors.especialidadeId && (
                 <p className="text-sm text-destructive">{errors.especialidadeId}</p>
               )}
@@ -210,78 +187,61 @@ export default function NovaEntrada() {
             {/* Procedimento */}
             <div className="space-y-2">
               <Label htmlFor="procedimento">Procedimento *</Label>
-              <Select 
-                value={formData.procedimentoId} 
+              <AutocompleteSelect
+                items={procedimentosResult.items}
+                value={formData.procedimentoId}
                 onValueChange={(value) => {
                   setFormData(prev => ({ ...prev, procedimentoId: value }))
                   setErrors(prev => ({ ...prev, procedimentoId: "" }))
                 }}
+                onSearch={(query, page, reset) => 
+                  searchProcedimentos(query, formData.especialidadeId, page, reset)
+                }
+                loading={procedimentosResult.loading}
+                hasMore={procedimentosResult.hasMore}
+                error={procedimentosResult.error}
                 disabled={!formData.especialidadeId}
-              >
-                <SelectTrigger className={errors.procedimentoId ? "border-destructive" : ""}>
-                  <SelectValue placeholder={
-                    formData.especialidadeId 
-                      ? "Selecione o procedimento" 
-                      : "Primeiro selecione uma especialidade"
-                  } />
-                </SelectTrigger>
-                <SelectContent>
-                  {procedimentosFiltrados.map(proc => (
-                    <SelectItem key={proc.id} value={proc.id}>
-                      {proc.nome} ({proc.codigo})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder={
+                  formData.especialidadeId 
+                    ? "Selecione o procedimento" 
+                    : "Primeiro selecione uma especialidade"
+                }
+                searchPlaceholder="Buscar procedimento..."
+                className={errors.procedimentoId ? "border-destructive" : ""}
+              />
               {errors.procedimentoId && (
                 <p className="text-sm text-destructive">{errors.procedimentoId}</p>
               )}
             </div>
 
-            {/* Paciente */}
+            {/* Prontuário do Paciente */}
             <div className="space-y-2">
-              <Label htmlFor="paciente">Paciente *</Label>
-              <Select 
-                value={formData.pacienteId} 
+              <ProntuarioField
+                value={formData.prontuario}
                 onValueChange={(value) => {
-                  setFormData(prev => ({ ...prev, pacienteId: value }))
-                  setErrors(prev => ({ ...prev, pacienteId: "" }))
+                  setFormData(prev => ({ ...prev, prontuario: value }))
+                  setErrors(prev => ({ ...prev, prontuario: "" }))
                 }}
-              >
-                <SelectTrigger className={errors.pacienteId ? "border-destructive" : ""}>
-                  <SelectValue placeholder="Selecione o paciente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {pacientes.map(pac => (
-                    <SelectItem key={pac.id} value={pac.id}>
-                      {pac.nome} - {pac.prontuario}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.pacienteId && (
-                <p className="text-sm text-destructive">{errors.pacienteId}</p>
-              )}
+                onValidPaciente={handleValidPaciente}
+                error={errors.prontuario}
+                required={true}
+              />
             </div>
 
             {/* Médico */}
             <div className="space-y-2">
               <Label htmlFor="medico">Médico (Opcional)</Label>
-              <Select 
-                value={formData.medicoId} 
+              <AutocompleteSelect
+                items={profissionaisResult.items}
+                value={formData.medicoId}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, medicoId: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o médico responsável" />
-                </SelectTrigger>
-                <SelectContent>
-                  {medicos.map(med => (
-                    <SelectItem key={med.id} value={med.id}>
-                      {med.nome} - CRM {med.crm}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onSearch={searchProfissionais}
+                loading={profissionaisResult.loading}
+                hasMore={profissionaisResult.hasMore}
+                error={profissionaisResult.error}
+                placeholder="Selecione o médico responsável"
+                searchPlaceholder="Buscar médico..."
+              />
             </div>
           </CardContent>
         </Card>
