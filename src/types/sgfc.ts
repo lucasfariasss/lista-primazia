@@ -43,25 +43,28 @@ export interface EntradaLEC {
   medicoId: string;
   medico: Medico;
   
-  // Dados complementares (mapeados do banco)
+  // Dados complementares (editáveis no SGFC)
   dataEntrada: string;
-  prioridade: 'ONC' | 'BRE' | 'SEM'; // Oncológico, Com Brevidade, Sem Brevidade
-  medidaJudicial: boolean;
-  situacao: 'CA' | 'AE' | 'DP' | 'PP' | 'CNR' | 'T1F' | 'T2F' | 'T3F' | 'CRS';
+  urgencia: boolean;
+  oncologico: boolean;
+  ordemJudicial: boolean;
   observacoes?: string;
-  dataNovoContato?: string;
   
-  // Campos calculados para compatibilidade
-  urgencia: boolean; // prioridade === 'BRE'
-  oncologico: boolean; // prioridade === 'ONC'
-  ordemJudicial: boolean; // medidaJudicial
+  // Calculados
   diasEspera: number;
   scorePrioridade: number;
   posicao: number;
   
   // Status
   ativo: boolean;
-  motivoSaida?: 'MORTE' | 'OUTRO_LOCAL' | 'AUTOEXCLUSAO';
+  motivoRemocao?: string;
+  dataRemocao?: string;
+  
+  // Auditoria
+  criadoPor: string;
+  criadoEm: string;
+  atualizadoPor?: string;
+  atualizadoEm?: string;
 }
 
 export interface UserProfile {
@@ -76,12 +79,9 @@ export interface FilterLEC {
   especialidadeId?: string;
   procedimentoId?: string;
   medicoId?: string;
-  prioridade?: 'ONC' | 'BRE' | 'SEM';
-  situacao?: 'CA' | 'AE' | 'DP' | 'PP' | 'CNR' | 'T1F' | 'T2F' | 'T3F' | 'CRS';
   urgencia?: boolean;
   oncologico?: boolean;
   ordemJudicial?: boolean;
-  ativo?: boolean;
   dataInicio?: string;
   dataFim?: string;
 }

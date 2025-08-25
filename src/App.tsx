@@ -16,7 +16,6 @@ import Medicos from "./pages/catalogo/Medicos";
 import NovaEntrada from "./pages/lec/NovaEntrada";
 import VerEntrada from "./pages/lec/VerEntrada";
 import EditarEntrada from "./pages/lec/EditarEntrada";
-import ListaEspera from "./pages/lec/ListaEspera";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,10 +47,9 @@ const App = () => (
                 <MainLayout user={mockUser}>
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
-                    <Route path="/lec/lista-espera" element={<ListaEspera />} />
-                    <Route path="/lec/nova-entrada" element={<NovaEntrada />} />
-                    <Route path="/lec/entrada/:id" element={<VerEntrada />} />
-                    <Route path="/lec/entrada/:id/editar" element={<EditarEntrada />} />
+                    <Route path="/lec/nova" element={<NovaEntrada />} />
+                    <Route path="/lec/:id" element={<VerEntrada />} />
+                    <Route path="/lec/:id/editar" element={<EditarEntrada />} />
                     <Route path="/catalogo/especialidades" element={<Especialidades />} />
                     <Route path="/catalogo/pacientes" element={<Pacientes />} />
                     <Route path="/catalogo/procedimentos" element={<Procedimentos />} />
