@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { supabase } from '@/integrations/supabase/client'
+import { useEspecialidades, usePacientes, useProcedimentos, useProfissionais, formatEspecialidade, formatPaciente, formatProcedimento, formatProfissional } from './useSupabaseData'
 
 export interface SearchResultItem {
   id: string
@@ -31,6 +31,7 @@ const ITEMS_PER_PAGE = 20
 
 // Hook para busca incremental de especialidades
 export function useEspecialidadesSearch() {
+  const { especialidades: allEspecialidades, loading: initialLoading, error: initialError } = useEspecialidades()
   const [result, setResult] = useState<SearchResult>({
     items: [],
     hasMore: false,
@@ -46,37 +47,33 @@ export function useEspecialidadesSearch() {
     if (query.length > 0 && query.length < 2) return
 
     try {
-      setResult(prev => ({ ...prev, loading: true, error: null }))
+      setResult(prev => ({ ...prev, loading: true, error: initialError }))
 
-      let queryBuilder = supabase
-        .from('especialidades')
-        .select('*')
-        .order('NOME_ESPECIALIDADE')
-
-      if (query) {
-        queryBuilder = queryBuilder.ilike('NOME_ESPECIALIDADE', `%${query}%`)
+      if (initialError) {
+        setResult(prev => ({ ...prev, loading: false, error: initialError }))
+        return
       }
 
+      // Simular debounce
+      await new Promise(resolve => setTimeout(resolve, 300))
+
+      const formattedEspecialidades = allEspecialidades.map(formatEspecialidade)
+      
+      // Filtrar por query se fornecida
+      const filteredEspecialidades = query 
+        ? formattedEspecialidades.filter(esp => 
+            esp.name.toLowerCase().includes(query.toLowerCase())
+          )
+        : formattedEspecialidades
+
+      // Aplicar paginação
       const from = page * ITEMS_PER_PAGE
-      const to = from + ITEMS_PER_PAGE - 1
-
-      const { data, error, count } = await queryBuilder
-        .range(from, to)
-        .limit(ITEMS_PER_PAGE)
-
-      if (error) throw error
-
-      const formattedData = (data || []).map(item => ({
-        id: item.COD_ESPECIALIDADE.toString(),
-        name: item.NOME_ESPECIALIDADE || '',
-        codigo: item.COD_ESPECIALIDADE.toString(),
-        description: `Especialidade médica - Código ${item.COD_ESPECIALIDADE}`
-      }))
-
-      const hasMore = count ? count > (page + 1) * ITEMS_PER_PAGE : false
+      const to = from + ITEMS_PER_PAGE
+      const pageData = filteredEspecialidades.slice(from, to)
+      const hasMore = to < filteredEspecialidades.length
 
       setResult(prev => ({
-        items: reset ? formattedData : [...prev.items, ...formattedData],
+        items: reset ? pageData : [...prev.items, ...pageData],
         hasMore,
         loading: false,
         error: null
@@ -88,13 +85,14 @@ export function useEspecialidadesSearch() {
         error: err.message || 'Erro ao buscar especialidades'
       }))
     }
-  }, [])
+  }, [allEspecialidades, initialError])
 
   return { result, searchEspecialidades }
 }
 
 // Hook para busca incremental de procedimentos
 export function useProcedimentosSearch() {
+  const { procedimentos: allProcedimentos, loading: initialLoading, error: initialError } = useProcedimentos()
   const [result, setResult] = useState<SearchResult>({
     items: [],
     hasMore: false,
@@ -115,42 +113,41 @@ export function useProcedimentosSearch() {
     }
 
     try {
-      setResult(prev => ({ ...prev, loading: true, error: null }))
+      setResult(prev => ({ ...prev, loading: true, error: initialError }))
 
-      let queryBuilder = supabase
-        .from('procedimentos')
-        .select('*')
-        .eq('cod_especialidade_fk', Number(especialidadeId))
-        .order('PROCEDIMENTO')
-
-      if (query) {
-        queryBuilder = queryBuilder.ilike('PROCEDIMENTO', `%${query}%`)
+      if (initialError) {
+        setResult(prev => ({ ...prev, loading: false, error: initialError }))
+        return
       }
 
+      // Simular debounce
+      await new Promise(resolve => setTimeout(resolve, 300))
+
+      const formattedProcedimentos = allProcedimentos.map(formatProcedimento)
+      
+      // Filtrar por especialidade e query
+      let filteredProcedimentos = formattedProcedimentos.filter(proc => 
+        proc.especialidadeId === especialidadeId
+      )
+
+      if (query) {
+        filteredProcedimentos = filteredProcedimentos.filter(proc =>
+          proc.name.toLowerCase().includes(query.toLowerCase())
+        )
+      }
+
+      // Aplicar paginação
       const from = page * ITEMS_PER_PAGE
-      const to = from + ITEMS_PER_PAGE - 1
+      const to = from + ITEMS_PER_PAGE
+      const pageData = filteredProcedimentos.slice(from, to)
+      const hasMore = to < filteredProcedimentos.length
 
-      const { data, error, count } = await queryBuilder
-        .range(from, to)
-        .limit(ITEMS_PER_PAGE)
-
-      if (error) throw error
-
-      const formattedData = (data || []).map(item => ({
-        id: item.COD_PROCEDIMENTO.toString(),
-        name: item.PROCEDIMENTO || '',
-        codigo: item.COD_PROCEDIMENTO.toString(),
-        description: `Procedimento cirúrgico - Código ${item.COD_PROCEDIMENTO}`
-      }))
-
-      const hasMore = count ? count > (page + 1) * ITEMS_PER_PAGE : false
-
-      setResult({
-        items: reset ? formattedData : [...result.items, ...formattedData],
+      setResult(prev => ({
+        items: reset ? pageData : [...prev.items, ...pageData],
         hasMore,
         loading: false,
         error: null
-      })
+      }))
     } catch (err: any) {
       setResult({
         items: [],
@@ -159,13 +156,14 @@ export function useProcedimentosSearch() {
         error: err.message || 'Erro ao buscar procedimentos'
       })
     }
-  }, [result.items])
+  }, [allProcedimentos, initialError])
 
   return { result, searchProcedimentos }
 }
 
 // Hook para busca incremental de profissionais
 export function useProfissionaisSearch() {
+  const { profissionais: allProfissionais, loading: initialLoading, error: initialError } = useProfissionais()
   const [result, setResult] = useState<SearchResult>({
     items: [],
     hasMore: false,
@@ -181,37 +179,33 @@ export function useProfissionaisSearch() {
     if (query.length > 0 && query.length < 2) return
 
     try {
-      setResult(prev => ({ ...prev, loading: true, error: null }))
+      setResult(prev => ({ ...prev, loading: true, error: initialError }))
 
-      let queryBuilder = supabase
-        .from('profissionais')
-        .select('*')
-        .order('NOME_PROFISSIONAL')
-
-      if (query) {
-        queryBuilder = queryBuilder.ilike('NOME_PROFISSIONAL', `%${query}%`)
+      if (initialError) {
+        setResult(prev => ({ ...prev, loading: false, error: initialError }))
+        return
       }
 
+      // Simular debounce
+      await new Promise(resolve => setTimeout(resolve, 300))
+
+      const formattedProfissionais = allProfissionais.map(formatProfissional)
+      
+      // Filtrar por query se fornecida
+      const filteredProfissionais = query 
+        ? formattedProfissionais.filter(prof => 
+            prof.name.toLowerCase().includes(query.toLowerCase())
+          )
+        : formattedProfissionais
+
+      // Aplicar paginação
       const from = page * ITEMS_PER_PAGE
-      const to = from + ITEMS_PER_PAGE - 1
-
-      const { data, error, count } = await queryBuilder
-        .range(from, to)
-        .limit(ITEMS_PER_PAGE)
-
-      if (error) throw error
-
-      const formattedData = (data || []).map(item => ({
-        id: item.MATRICULA.toString(),
-        name: item.NOME_PROFISSIONAL || '',
-        codigo: item.MATRICULA.toString(),
-        description: `CRM ${item.MATRICULA}`
-      }))
-
-      const hasMore = count ? count > (page + 1) * ITEMS_PER_PAGE : false
+      const to = from + ITEMS_PER_PAGE
+      const pageData = filteredProfissionais.slice(from, to)
+      const hasMore = to < filteredProfissionais.length
 
       setResult(prev => ({
-        items: reset ? formattedData : [...prev.items, ...formattedData],
+        items: reset ? pageData : [...prev.items, ...pageData],
         hasMore,
         loading: false,
         error: null
@@ -223,13 +217,14 @@ export function useProfissionaisSearch() {
         error: err.message || 'Erro ao buscar profissionais'
       }))
     }
-  }, [])
+  }, [allProfissionais, initialError])
 
   return { result, searchProfissionais }
 }
 
 // Hook para validação de prontuário
 export function useProntuarioValidation() {
+  const { pacientes: allPacientes } = usePacientes()
   const [result, setResult] = useState<PacienteValidation>({
     isValid: false,
     paciente: null,
@@ -248,27 +243,26 @@ export function useProntuarioValidation() {
       return
     }
 
+    setResult(prev => ({ ...prev, loading: true, error: null }))
+
     try {
-      setResult(prev => ({ ...prev, loading: true, error: null }))
+      // Simular busca no banco
+      await new Promise(resolve => setTimeout(resolve, 500))
 
-      const { data, error } = await supabase
-        .from('pacientes')
-        .select('*')
-        .eq('prontuario_pac', Number(prontuario))
-        .single()
+      const pacienteEncontrado = allPacientes.find(pac => 
+        pac.PRONTUARIO_PAC.toString() === prontuario
+      )
 
-      if (error && error.code !== 'PGRST116') {
-        throw error
-      }
-
-      if (data) {
+      if (pacienteEncontrado) {
+        const formattedPaciente = formatPaciente(pacienteEncontrado)
+        
         setResult({
           isValid: true,
           paciente: {
-            id: data.PRONTUARIO_PAC.toString(),
-            nome: data.NOME_PACIENTE || '',
-            prontuario: data.PRONTUARIO_PAC.toString(),
-            phone: data.FONE_RECADO ? `${data.DDD_FONE_RECADO || ''} ${data.FONE_RECADO}`.trim() : undefined
+            id: formattedPaciente.id,
+            nome: formattedPaciente.nome,
+            prontuario: formattedPaciente.prontuario,
+            phone: formattedPaciente.phone
           },
           loading: false,
           error: null
@@ -289,7 +283,7 @@ export function useProntuarioValidation() {
         error: err.message || 'Erro ao validar prontuário'
       })
     }
-  }, [])
+  }, [allPacientes])
 
   const clearValidation = useCallback(() => {
     setResult({
