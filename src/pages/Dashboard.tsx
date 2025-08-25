@@ -1,10 +1,6 @@
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { LECTable } from "@/components/sgfc/LECTable"
-import { EntradaLEC, FilterLEC } from "@/types/sgfc"
-import { Plus, Filter, Download, Users, Clock, AlertTriangle, Scale } from "lucide-react"
+import { EntradaLEC } from "@/types/sgfc"
+import { Users, Clock, AlertTriangle, Scale, TrendingUp, Calendar, Activity, PieChart } from "lucide-react"
 
 // Mock data para demonstração
 const mockEntradas: EntradaLEC[] = [
@@ -137,56 +133,34 @@ const mockEntradas: EntradaLEC[] = [
 ]
 
 export default function Dashboard() {
-  const [filters, setFilters] = useState<FilterLEC>({})
-  const [filteredEntradas, setFilteredEntradas] = useState(mockEntradas)
-
-  // Estatísticas para os cards
-  const totalPacientes = filteredEntradas.length
+  // Dados estatísticos (serão conectados à API futuramente)
+  const totalPacientes = mockEntradas.length
   const tempoMedioEspera = Math.round(
-    filteredEntradas.reduce((acc, e) => acc + e.diasEspera, 0) / totalPacientes
+    mockEntradas.reduce((acc, e) => acc + e.diasEspera, 0) / totalPacientes
   )
-  const pacientesUrgentes = filteredEntradas.filter(e => e.urgencia).length
-  const pacientesJudiciais = filteredEntradas.filter(e => e.ordemJudicial).length
-
-  const handleEdit = (entrada: EntradaLEC) => {
-    console.log("Edit entrada:", entrada.id)
-    // TODO: Implementar navegação para edição
-  }
-
-  const handleRemove = (entrada: EntradaLEC) => {
-    console.log("Remove entrada:", entrada.id)
-    // TODO: Implementar modal de confirmação
-  }
-
-  const handleView = (entrada: EntradaLEC) => {
-    console.log("View entrada:", entrada.id)
-    // TODO: Implementar modal de detalhes
-  }
+  const pacientesUrgentes = mockEntradas.filter(e => e.urgencia).length
+  const pacientesJudiciais = mockEntradas.filter(e => e.ordemJudicial).length
+  
+  // Estatísticas por especialidade
+  const distribuicaoEspecialidades = mockEntradas.reduce((acc, entrada) => {
+    const esp = entrada.especialidade.name
+    acc[esp] = (acc[esp] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+  
+  // Top 3 especialidades
+  const topEspecialidades = Object.entries(distribuicaoEspecialidades)
+    .sort(([,a], [,b]) => b - a)
+    .slice(0, 3)
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Lista de Espera Cirúrgica</h1>
-          <p className="text-muted-foreground mt-2">
-            Gestão centralizada da fila cirúrgica com priorização automática
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline">
-            <Filter className="h-4 w-4 mr-2" />
-            Filtros
-          </Button>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Exportar
-          </Button>
-          <Button variant="medical">
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Entrada
-          </Button>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Dashboard LEC</h1>
+        <p className="text-muted-foreground mt-2">
+          Visão geral e indicadores da Lista de Espera Cirúrgica
+        </p>
       </div>
 
       {/* Cards de estatísticas */}
@@ -244,16 +218,82 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Tabela principal */}
-      <LECTable
-        entradas={filteredEntradas}
-        filters={filters}
-        onEdit={handleEdit}
-        onRemove={handleRemove}
-        onView={handleView}
-        showActions={true}
-        showSensitiveData={true}
-      />
+      {/* Seção de Indicadores por Especialidade */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PieChart className="h-5 w-5 text-primary" />
+              Distribuição por Especialidade
+            </CardTitle>
+            <CardDescription>
+              Pacientes na fila por área médica
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {topEspecialidades.map(([especialidade, quantidade], index) => (
+                <div key={especialidade} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full ${
+                      index === 0 ? 'bg-primary' : 
+                      index === 1 ? 'bg-secondary' : 'bg-accent'
+                    }`} />
+                    <span className="font-medium text-sm">{especialidade}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold text-primary">{quantidade}</span>
+                    <span className="text-xs text-muted-foreground ml-1">pacientes</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              Métricas de Performance
+            </CardTitle>
+            <CardDescription>
+              Indicadores de eficiência da fila
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Tempo médio global</span>
+                </div>
+                <span className="font-bold text-primary">{tempoMedioEspera} dias</span>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Taxa de casos urgentes</span>
+                </div>
+                <span className="font-bold text-urgent">
+                  {Math.round((pacientesUrgentes / totalPacientes) * 100)}%
+                </span>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Scale className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Casos judiciais</span>
+                </div>
+                <span className="font-bold text-legal">
+                  {Math.round((pacientesJudiciais / totalPacientes) * 100)}%
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

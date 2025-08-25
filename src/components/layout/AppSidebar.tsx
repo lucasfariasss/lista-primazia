@@ -31,8 +31,8 @@ import { Button } from "@/components/ui/button"
 
 const mainItems = [
   { title: "Dashboard LEC", url: "/", icon: Activity },
+  { title: "Lista de Espera Cirúrgica", url: "/lista-espera", icon: Calendar },
   { title: "Consulta Pública", url: "/consulta", icon: Search },
-  { title: "Nova Entrada", url: "/lec/nova", icon: Calendar },
 ]
 
 const catalogItems = [
@@ -42,10 +42,11 @@ const catalogItems = [
   { title: "Médicos", url: "/catalogo/medicos", icon: User },
 ]
 
-const reportItems = [
-  { title: "Relatórios", url: "/relatorios", icon: BarChart3 },
-  { title: "Auditoria", url: "/auditoria", icon: FileText },
-]
+// Temporariamente removido - será implementado futuramente
+// const reportItems = [
+//   { title: "Relatórios", url: "/relatorios", icon: BarChart3 },
+//   { title: "Auditoria", url: "/auditoria", icon: FileText },
+// ]
 
 export function AppSidebar() {
   const { state, isMobile } = useSidebar()
@@ -113,7 +114,8 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Relatórios */}
+        {/* Relatórios - Temporariamente removido */}
+        {/*
         <SidebarGroup>
           <SidebarGroupLabel>Relatórios</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -131,6 +133,7 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        */}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-border p-4">
