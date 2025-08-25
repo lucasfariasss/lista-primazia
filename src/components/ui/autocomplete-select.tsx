@@ -47,7 +47,7 @@ export function AutocompleteSelect({
   value,
   onValueChange,
   onSearch,
-  // onLoadMore, // não precisamos mais do botão
+  onLoadMore,
   placeholder = "Selecione uma opção",
   emptyMessage = "Nenhum item encontrado",
   disabled = false,
@@ -61,13 +61,8 @@ export function AutocompleteSelect({
   const [open, setOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [page, setPage] = useState(0)
-
-  // refs para controle do observer e do viewport real de scroll
   const abortControllerRef = useRef<AbortController | null>(null)
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
-  const viewportRef = useRef<HTMLElement | null>(null)
-  const loadMoreRef = useRef<HTMLDivElement | null>(null)
-  const pageRef = useRef(0) // evita múltiplos disparos para a mesma página
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   // Debounce search
   const debouncedSearch = useCallback(
@@ -76,9 +71,7 @@ export function AutocompleteSelect({
         abortControllerRef.current.abort()
       }
       abortControllerRef.current = new AbortController()
-
-      // reset na paginação
-      pageRef.current = 0
+      
       setPage(0)
       onSearch(query, 0, true)
     }, 350),
@@ -93,60 +86,27 @@ export function AutocompleteSelect({
     }
   }
 
-  // Encontrar item selecionado
+  // Load more items on scroll
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current || !hasMore || loading) return
+
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current
+    if (scrollTop + clientHeight >= scrollHeight - 100) {
+      const nextPage = page + 1
+      setPage(nextPage)
+      onSearch(searchQuery, nextPage, false)
+    }
+  }, [hasMore, loading, page, searchQuery, onSearch])
+
+  // Find selected item
   const selectedItem = items.find(item => item.id === value)
 
-  // Carregar dados iniciais ao abrir
+  // Load initial data when opened
   useEffect(() => {
     if (open && items.length === 0 && !loading) {
-      pageRef.current = 0
-      setPage(0)
       onSearch("", 0, true)
     }
   }, [open, items.length, loading, onSearch])
-
-  // Quando o popover abrir, localizar o "viewport" interno do ScrollArea (Radix)
-  useEffect(() => {
-    if (!open) return
-    // o ref aponta para a div root; procuramos o viewport interno da Radix
-    if (scrollContainerRef.current) {
-      const vp = scrollContainerRef.current.querySelector<HTMLElement>('[data-radix-scroll-area-viewport]')
-      if (vp) {
-        viewportRef.current = vp
-      }
-    }
-  }, [open])
-
-  // IntersectionObserver para "infinite scroll"
-  useEffect(() => {
-    const vp = viewportRef.current
-    const sentinel = loadMoreRef.current
-
-    if (!open || !vp || !sentinel) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const first = entries[0]
-        if (
-          first.isIntersecting &&
-          hasMore &&
-          !loading
-        ) {
-          const nextPage = pageRef.current + 1
-          pageRef.current = nextPage
-          setPage(nextPage)
-          onSearch(searchQuery, nextPage, false)
-        }
-      },
-      {
-        root: vp,           // importante: observar dentro do ScrollArea
-        rootMargin: "200px" // dispara um pouco antes de chegar ao fim
-      }
-    )
-
-    observer.observe(sentinel)
-    return () => observer.disconnect()
-  }, [open, hasMore, loading, searchQuery, onSearch])
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -189,22 +149,25 @@ export function AutocompleteSelect({
             />
           </div>
           <CommandList>
-            {/* ref no container para localizar o viewport interno */}
-            <ScrollArea className="h-72" ref={scrollContainerRef}>
+            <ScrollArea 
+              className="h-72" 
+              ref={scrollRef}
+              onScroll={handleScroll}
+            >
               <CommandGroup>
                 {error && (
                   <div className="px-3 py-2 text-sm text-destructive">
                     {error}
                   </div>
                 )}
-
+                
                 {searchQuery.length > 0 && searchQuery.length < minSearchLength && (
                   <CommandEmpty>
                     Digite pelo menos {minSearchLength} caracteres para buscar
                   </CommandEmpty>
                 )}
 
-                {(searchQuery.length === 0 || searchQuery.length >= minSearchLength) && (
+                {searchQuery.length === 0 || searchQuery.length >= minSearchLength ? (
                   <>
                     {items.length === 0 && !loading && !error && (
                       <CommandEmpty>{emptyMessage}</CommandEmpty>
@@ -253,10 +216,24 @@ export function AutocompleteSelect({
                       </div>
                     )}
 
-                    {/* Sentinela para disparar o "load more" ao chegar perto do fim */}
-                    <div ref={loadMoreRef} className="h-4" />
+                    {hasMore && !loading && (
+                      <div className="p-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full"
+                          onClick={() => {
+                            const nextPage = page + 1
+                            setPage(nextPage)
+                            onSearch(searchQuery, nextPage, false)
+                          }}
+                        >
+                          Carregar mais
+                        </Button>
+                      </div>
+                    )}
                   </>
-                )}
+                ) : null}
               </CommandGroup>
             </ScrollArea>
           </CommandList>
