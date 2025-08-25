@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { MainLayout } from "./components/layout/MainLayout";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import ConsultaPublica from "./pages/ConsultaPublica";
 import Login from "./pages/Login";
@@ -30,33 +32,37 @@ const mockUser = {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* Rotas públicas sem layout */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/consulta" element={<ConsultaPublica />} />
-          
-          {/* Rotas com layout principal */}
-          <Route path="/*" element={
-            <MainLayout user={mockUser}>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/lec/nova" element={<NovaEntrada />} />
-                <Route path="/lec/:id" element={<VerEntrada />} />
-                <Route path="/lec/:id/editar" element={<EditarEntrada />} />
-                <Route path="/catalogo/especialidades" element={<Especialidades />} />
-                <Route path="/catalogo/pacientes" element={<Pacientes />} />
-                <Route path="/catalogo/procedimentos" element={<Procedimentos />} />
-                <Route path="/catalogo/medicos" element={<Medicos />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </MainLayout>
-          } />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Rotas públicas sem layout */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/consulta" element={<ConsultaPublica />} />
+            
+            {/* Rotas com layout principal - protegidas */}
+            <Route path="/*" element={
+              <ProtectedRoute>
+                <MainLayout user={mockUser}>
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/lec/nova" element={<NovaEntrada />} />
+                    <Route path="/lec/:id" element={<VerEntrada />} />
+                    <Route path="/lec/:id/editar" element={<EditarEntrada />} />
+                    <Route path="/catalogo/especialidades" element={<Especialidades />} />
+                    <Route path="/catalogo/pacientes" element={<Pacientes />} />
+                    <Route path="/catalogo/procedimentos" element={<Procedimentos />} />
+                    <Route path="/catalogo/medicos" element={<Medicos />} />
+                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </MainLayout>
+              </ProtectedRoute>
+            } />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

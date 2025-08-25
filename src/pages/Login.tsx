@@ -1,35 +1,55 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Activity, Lock, User } from "lucide-react"
+import { Activity, Lock, User, UserPlus } from "lucide-react"
+import { useAuth } from "@/contexts/AuthContext"
+import { toast } from "sonner"
 
 export default function Login() {
   const navigate = useNavigate()
+  const { signIn, signUp, user } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
+  const [isSignUp, setIsSignUp] = useState(false)
 
-  const handleLogin = async (e: React.FormEvent) => {
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user) {
+      navigate("/")
+    }
+  }, [user, navigate])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     
-    // Simular login
-    setTimeout(() => {
+    try {
+      if (isSignUp) {
+        const { error } = await signUp(email, password)
+        if (error) {
+          toast.error(error.message)
+        } else {
+          toast.success("Conta criada! Verifique seu email para confirmar.")
+        }
+      } else {
+        const { error } = await signIn(email, password)
+        if (error) {
+          toast.error(error.message)
+        } else {
+          toast.success("Login realizado com sucesso!")
+          navigate("/")
+        }
+      }
+    } catch (error) {
+      toast.error("Erro inesperado. Tente novamente.")
+    } finally {
       setLoading(false)
-      navigate("/")
-    }, 1000)
-  }
-
-  const quickLogin = (role: string) => {
-    setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
-      navigate("/")
-    }, 500)
+    }
   }
 
   return (
@@ -49,21 +69,21 @@ export default function Login() {
         <Card className="shadow-medical">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5" />
-              Acesso ao Sistema
+              {isSignUp ? <UserPlus className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
+              {isSignUp ? "Criar Conta" : "Acesso ao Sistema"}
             </CardTitle>
             <CardDescription>
-              Entre com suas credenciais institucionais
+              {isSignUp ? "Crie sua conta institucional" : "Entre com suas credenciais institucionais"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email Institucional</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="usuario@hulw.ufpb.br"
+                  placeholder="seu.email@exemplo.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -88,37 +108,23 @@ export default function Login() {
                 variant="medical"
                 disabled={loading}
               >
-                {loading ? "Autenticando..." : "Entrar no Sistema"}
+                {loading 
+                  ? (isSignUp ? "Criando conta..." : "Entrando...") 
+                  : (isSignUp ? "Criar Conta" : "Entrar")
+                }
               </Button>
             </form>
 
-            {/* Acesso rápido para demonstração */}
             <div className="border-t border-border pt-4 space-y-3">
-              <p className="text-sm text-muted-foreground text-center">
-                Acesso rápido para demonstração:
-              </p>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => quickLogin("nir")}
-                  disabled={loading}
-                >
-                  <User className="h-4 w-4 mr-1" />
-                  NIR
-                </Button>
-                
-                <Button
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => quickLogin("medico")}
-                  disabled={loading}
-                >
-                  <User className="h-4 w-4 mr-1" />
-                  Médico
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full"
+                onClick={() => setIsSignUp(!isSignUp)}
+                disabled={loading}
+              >
+                {isSignUp ? "Já tem conta? Fazer login" : "Não tem conta? Criar uma"}
+              </Button>
 
               <Button
                 variant="ghost"

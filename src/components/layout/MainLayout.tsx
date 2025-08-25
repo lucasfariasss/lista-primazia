@@ -1,6 +1,9 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "./AppSidebar"
 import { UserProfile } from "@/types/sgfc"
+import { useAuth } from "@/contexts/AuthContext"
+import { Button } from "@/components/ui/button"
+import { LogOut } from "lucide-react"
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -8,6 +11,12 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children, user }: MainLayoutProps) {
+  const { signOut, user: authUser } = useAuth()
+
+  const handleLogout = async () => {
+    await signOut()
+  }
+
   return (
     <SidebarProvider defaultOpen>
       <div className="min-h-screen flex w-full bg-gradient-light">
@@ -21,15 +30,23 @@ export function MainLayout({ children, user }: MainLayoutProps) {
             <div className="flex-1" />
             
             {/* User info */}
-            {user && (
+            {authUser && (
               <div className="flex items-center gap-4">
                 <div className="text-right">
-                  <p className="font-medium text-sm">{user.name}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
+                  <p className="font-medium text-sm">{authUser.email}</p>
+                  <p className="text-xs text-muted-foreground">Logado</p>
                 </div>
                 <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-medium text-sm">
-                  {user.name.charAt(0).toUpperCase()}
+                  {authUser.email?.charAt(0).toUpperCase()}
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="h-8 w-8 p-0"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
               </div>
             )}
           </header>
