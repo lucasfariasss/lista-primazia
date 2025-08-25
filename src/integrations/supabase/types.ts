@@ -29,6 +29,83 @@ export type Database = {
         }
         Relationships: []
       }
+      lista_espera_cirurgica: {
+        Row: {
+          ativo: boolean
+          cod_especialidade: number
+          cod_procedimento: number
+          data_entrada: string
+          data_novo_contato: string | null
+          id: number
+          matricula_medico: number | null
+          medida_judicial: boolean
+          motivo_saida: Database["public"]["Enums"]["motivo_saida_enum"] | null
+          observacoes: string | null
+          prioridade: Database["public"]["Enums"]["prioridade_enum"]
+          prontuario: number
+          situacao: Database["public"]["Enums"]["situacao_enum"]
+        }
+        Insert: {
+          ativo?: boolean
+          cod_especialidade: number
+          cod_procedimento: number
+          data_entrada?: string
+          data_novo_contato?: string | null
+          id?: number
+          matricula_medico?: number | null
+          medida_judicial?: boolean
+          motivo_saida?: Database["public"]["Enums"]["motivo_saida_enum"] | null
+          observacoes?: string | null
+          prioridade?: Database["public"]["Enums"]["prioridade_enum"]
+          prontuario: number
+          situacao: Database["public"]["Enums"]["situacao_enum"]
+        }
+        Update: {
+          ativo?: boolean
+          cod_especialidade?: number
+          cod_procedimento?: number
+          data_entrada?: string
+          data_novo_contato?: string | null
+          id?: number
+          matricula_medico?: number | null
+          medida_judicial?: boolean
+          motivo_saida?: Database["public"]["Enums"]["motivo_saida_enum"] | null
+          observacoes?: string | null
+          prioridade?: Database["public"]["Enums"]["prioridade_enum"]
+          prontuario?: number
+          situacao?: Database["public"]["Enums"]["situacao_enum"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_lec_especialidade"
+            columns: ["cod_especialidade"]
+            isOneToOne: false
+            referencedRelation: "especialidades"
+            referencedColumns: ["COD_ESPECIALIDADE"]
+          },
+          {
+            foreignKeyName: "fk_lec_medico"
+            columns: ["matricula_medico"]
+            isOneToOne: false
+            referencedRelation: "profissionais"
+            referencedColumns: ["MATRICULA"]
+          },
+          {
+            foreignKeyName: "fk_lec_paciente"
+            columns: ["prontuario"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["PRONTUARIO_PAC"]
+          },
+          {
+            foreignKeyName: "fk_lec_procedimento"
+            columns: ["cod_procedimento"]
+            isOneToOne: false
+            referencedRelation: "procedimentos"
+            referencedColumns: ["COD_PROCEDIMENTO"]
+          },
+        ]
+      }
       pacientes: {
         Row: {
           DDD_FONE_RECADO: string | null
@@ -108,7 +185,18 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      motivo_saida_enum: "MORTE" | "OUTRO_LOCAL" | "AUTOEXCLUSAO"
+      prioridade_enum: "ONC" | "BRE" | "SEM"
+      situacao_enum:
+        | "CA"
+        | "AE"
+        | "DP"
+        | "PP"
+        | "CNR"
+        | "T1F"
+        | "T2F"
+        | "T3F"
+        | "CRS"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -235,6 +323,20 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      motivo_saida_enum: ["MORTE", "OUTRO_LOCAL", "AUTOEXCLUSAO"],
+      prioridade_enum: ["ONC", "BRE", "SEM"],
+      situacao_enum: [
+        "CA",
+        "AE",
+        "DP",
+        "PP",
+        "CNR",
+        "T1F",
+        "T2F",
+        "T3F",
+        "CRS",
+      ],
+    },
   },
 } as const
