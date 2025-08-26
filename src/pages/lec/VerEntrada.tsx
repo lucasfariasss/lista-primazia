@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate, Link } from "react-router-dom"
+import { useListaEsperaCirurgica } from "@/hooks/useListaEsperaCirurgica"
+import { EntradaLEC } from "@/types/sgfc"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -27,65 +29,25 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { useToast } from "@/hooks/use-toast"
 
-interface EntradaLEC {
-  id: string
-  prontuario: string
-  pacienteNome: string
-  especialidade: string
-  procedimento: string  
-  medico?: string
-  situacao: string
-  prioridade: "ONC" | "BRE" | "SEM"
-  medidaJudicial: boolean
-  ativo: boolean
-  posicao: number | null
-  dataEntrada: string
-  dataNovoContato?: string
-  observacoes?: string
-  criadoPor: string
-  criadoEm: string
-  atualizadoPor?: string
-  atualizadoEm?: string
-}
-
-// Mock data
-const mockEntrada: EntradaLEC = {
-  id: "123",
-  prontuario: "001234",
-  pacienteNome: "João Silva Santos",
-  especialidade: "Ortopedia",
-  procedimento: "Artroplastia total do joelho",
-  medico: "Dr. João Oliveira",
-  situacao: "PACIENTE PRONTO PARA CIRURGIA",
-  prioridade: "BRE",
-  medidaJudicial: true,
-  ativo: true,
-  posicao: 3,
-  dataEntrada: "2024-01-15",
-  dataNovoContato: "2024-12-15",
-  observacoes: "Paciente aguardando agendamento da cirurgia",
-  criadoPor: "nir001",
-  criadoEm: "2024-01-15T08:30:00Z",
-  atualizadoPor: "nir002", 
-  atualizadoEm: "2024-11-10T14:20:00Z"
-}
 
 const motivosSaida = [
-  { value: "CIRURGIA_REALIZADA", label: "Cirurgia realizada" },
-  { value: "OBITO", label: "Óbito" },
-  { value: "OUTRO_LOCAL", label: "Cirurgia em outro local" },
-  { value: "AUTOEXCLUSAO", label: "Autoexclusão do paciente" },
-  { value: "CONTRAINDICACAO", label: "Contraindicação médica" },
-  { value: "NAO_COMPARECIMENTO", label: "Não comparecimento" }
+  { value: "CIR", label: "Cirurgia realizada" },
+  { value: "OBI", label: "Óbito" },
+  { value: "OUT", label: "Cirurgia em outro local" },
+  { value: "AUT", label: "Autoexclusão do paciente" },
+  { value: "CON", label: "Contraindicação médica" },
+  { value: "NAO", label: "Não comparecimento" }
 ]
 
 export default function VerEntrada() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { getEntrada, removeEntrada } = useListaEsperaCirurgica()
   
   const [entrada, setEntrada] = useState<EntradaLEC | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [showRemoverDialog, setShowRemoverDialog] = useState(false)
   const [remocaoData, setRemocaoData] = useState({
     motivoSaida: "",
@@ -94,24 +56,33 @@ export default function VerEntrada() {
   const [removendo, setRemovendo] = useState(false)
 
   useEffect(() => {
-    // Simular carregamento dos dados
-    const timer = setTimeout(() => {
-      setEntrada(mockEntrada)
-      setLoading(false)
-    }, 800)
-
-    return () => clearTimeout(timer)
-  }, [id])
-
-  const getPrioridadeInfo = (prioridade: string) => {
-    switch (prioridade) {
-      case "ONC":
-        return { label: "Oncológico", variant: "oncology" as const, icon: Heart }
-      case "BRE":
-        return { label: "Com Brevidade", variant: "urgent" as const, icon: AlertCircle }
-      default:
-        return { label: "Sem Brevidade", variant: "secondary" as const, icon: Clock }
+    const carregarEntrada = async () => {
+      if (!id) return
+      
+      try {
+        setLoading(true)
+        setError(null)
+        const entradaData = await getEntrada(id)
+        setEntrada(entradaData)
+      } catch (err: any) {
+        console.error('Erro ao carregar entrada:', err)
+        setError(err.message || 'Erro ao carregar dados')
+      } finally {
+        setLoading(false)
+      }
     }
+
+    carregarEntrada()
+  }, [id, getEntrada])
+
+  const getPrioridadeInfo = (entrada: EntradaLEC) => {
+    if (entrada.oncologico) {
+      return { label: "Oncológico", variant: "oncology" as const, icon: Heart }
+    }
+    if (entrada.urgencia) {
+      return { label: "Com Brevidade", variant: "urgent" as const, icon: AlertCircle }
+    }
+    return { label: "Sem Brevidade", variant: "secondary" as const, icon: Clock }
   }
 
   const handleRemoverDaFila = async () => {
@@ -124,11 +95,12 @@ export default function VerEntrada() {
       return
     }
 
+    if (!id) return
+
     setRemovendo(true)
 
     try {
-      // Simular chamada API
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      await removeEntrada(id, remocaoData.motivoSaida as any)
 
       toast({
         title: "Paciente removido da fila",
@@ -136,13 +108,13 @@ export default function VerEntrada() {
       })
 
       // Atualizar entrada localmente
-      setEntrada(prev => prev ? { ...prev, ativo: false, posicao: null } : null)
+      setEntrada(prev => prev ? { ...prev, ativo: false } : null)
       setShowRemoverDialog(false)
       setRemocaoData({ motivoSaida: "", changeReason: "" })
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Erro ao remover",
-        description: "Ocorreu um erro. Tente novamente.",
+        description: error.message || "Ocorreu um erro. Tente novamente.",
         variant: "destructive"
       })
     } finally {
@@ -165,13 +137,15 @@ export default function VerEntrada() {
     )
   }
 
-  if (!entrada) {
+  if (error || !entrada) {
     return (
       <div className="max-w-4xl mx-auto text-center py-12">
         <AlertCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-        <h2 className="text-2xl font-bold mb-2">Entrada não encontrada</h2>
+        <h2 className="text-2xl font-bold mb-2">
+          {error ? "Erro ao carregar entrada" : "Entrada não encontrada"}
+        </h2>
         <p className="text-muted-foreground mb-4">
-          A entrada solicitada não foi encontrada ou você não tem permissão para visualizá-la.
+          {error || "A entrada solicitada não foi encontrada ou você não tem permissão para visualizá-la."}
         </p>
         <Button onClick={() => navigate("/")}>
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -181,7 +155,7 @@ export default function VerEntrada() {
     )
   }
 
-  const prioridadeInfo = getPrioridadeInfo(entrada.prioridade)
+  const prioridadeInfo = getPrioridadeInfo(entrada)
   const PrioridadeIcon = prioridadeInfo.icon
 
   return (
@@ -196,14 +170,14 @@ export default function VerEntrada() {
           <div>
             <h1 className="text-3xl font-bold">Entrada na LEC</h1>
             <p className="text-muted-foreground">
-              Prontuário: {entrada.prontuario} • ID: {entrada.id}
+              Prontuário: {entrada.paciente.prontuario} • ID: {entrada.id}
             </p>
           </div>
         </div>
 
         {/* Status Badges */}
         <div className="flex items-center gap-2">
-          <Badge variant={entrada.ativo ? "success" : "secondary"}>
+          <Badge variant={entrada.ativo ? "default" : "secondary"}>
             {entrada.ativo ? (
               <>
                 <CheckCircle className="h-3 w-3 mr-1" />
@@ -222,8 +196,8 @@ export default function VerEntrada() {
             {prioridadeInfo.label}
           </Badge>
           
-          {entrada.medidaJudicial && (
-            <Badge variant="legal">
+          {entrada.ordemJudicial && (
+            <Badge variant="outline" className="border-amber-500 text-amber-700">
               <Scale className="h-3 w-3 mr-1" />
               Judicial
             </Badge>
@@ -264,24 +238,25 @@ export default function VerEntrada() {
           <CardContent className="space-y-4">
             <div>
               <Label className="text-sm font-medium text-muted-foreground">Paciente</Label>
-              <p className="font-medium">{entrada.pacienteNome}</p>
-              <p className="text-sm text-muted-foreground">Prontuário: {entrada.prontuario}</p>
+              <p className="font-medium">{entrada.paciente.name}</p>
+              <p className="text-sm text-muted-foreground">Prontuário: {entrada.paciente.prontuario}</p>
             </div>
             
             <div>
               <Label className="text-sm font-medium text-muted-foreground">Especialidade</Label>
-              <p className="font-medium">{entrada.especialidade}</p>
+              <p className="font-medium">{entrada.especialidade.name}</p>
             </div>
             
             <div>
               <Label className="text-sm font-medium text-muted-foreground">Procedimento</Label>
-              <p className="font-medium">{entrada.procedimento}</p>
+              <p className="font-medium">{entrada.procedimento.name}</p>
             </div>
             
-            {entrada.medico && (
+            {entrada.medico.name && entrada.medico.name !== 'Médico não encontrado' && (
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Médico</Label>
-                <p className="font-medium">{entrada.medico}</p>
+                <p className="font-medium">{entrada.medico.name}</p>
+                <p className="text-sm text-muted-foreground">CRM: {entrada.medico.crm}</p>
               </div>
             )}
           </CardContent>
@@ -296,7 +271,7 @@ export default function VerEntrada() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {entrada.posicao && (
+            {entrada.posicao > 0 && (
               <div className="text-center p-4 bg-primary/10 rounded-lg">
                 <p className="text-3xl font-bold text-primary">#{entrada.posicao}</p>
                 <p className="text-sm text-muted-foreground">Posição atual</p>
@@ -304,9 +279,9 @@ export default function VerEntrada() {
             )}
             
             <div>
-              <Label className="text-sm font-medium text-muted-foreground">Situação</Label>
-              <Badge variant="outline" className="mt-1">
-                {entrada.situacao}
+              <Label className="text-sm font-medium text-muted-foreground">Dias de espera</Label>
+              <Badge variant={entrada.diasEspera > 90 ? "destructive" : "secondary"} className="mt-1">
+                {entrada.diasEspera} dias
               </Badge>
             </div>
             
@@ -328,16 +303,6 @@ export default function VerEntrada() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {entrada.dataNovoContato && (
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Próximo contato</Label>
-                <p className="font-medium flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  {format(new Date(entrada.dataNovoContato), "PPP", { locale: ptBR })}
-                </p>
-              </div>
-            )}
-            
             {entrada.observacoes && (
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Observações</Label>
@@ -366,8 +331,8 @@ export default function VerEntrada() {
             </div>
             
             {entrada.atualizadoPor && entrada.atualizadoEm && (
-              <div className="border-l-2 border-secondary pl-4">
-                <p className="font-medium text-secondary">Última atualização</p>
+              <div className="border-l-2 border-muted pl-4">
+                <p className="font-medium">Última atualização</p>
                 <p className="text-sm text-muted-foreground">
                   Por: {entrada.atualizadoPor} • {format(new Date(entrada.atualizadoEm), "PPP 'às' HH:mm", { locale: ptBR })}
                 </p>

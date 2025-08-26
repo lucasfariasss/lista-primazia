@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { useListaEsperaCirurgica } from "@/hooks/useListaEsperaCirurgica"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -86,6 +87,8 @@ export default function NovaEntrada() {
     return Object.keys(newErrors).length === 0
   }
 
+  const { createEntrada } = useListaEsperaCirurgica()
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -96,20 +99,29 @@ export default function NovaEntrada() {
     setLoading(true)
 
     try {
-      // Simular chamada API
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      const novaEntradaId = await createEntrada({
+        prontuario: parseInt(formData.prontuario),
+        cod_especialidade: parseInt(formData.especialidadeId),
+        cod_procedimento: parseInt(formData.procedimentoId),
+        matricula_medico: formData.medicoId ? parseInt(formData.medicoId) : undefined,
+        prioridade: formData.prioridade,
+        medida_judicial: formData.medidaJudicial,
+        situacao: formData.situacao as any,
+        observacoes: formData.observacoes || undefined,
+        data_novo_contato: formData.dataNovoContato ? format(formData.dataNovoContato, 'yyyy-MM-dd') : undefined
+      })
       
       toast({
         title: "Entrada criada com sucesso",
         description: "A nova entrada foi adicionada à Lista de Espera Cirúrgica."
       })
 
-      // Redirecionar para o detalhe (simulado)
-      navigate(`/lec/123`, { replace: true })
-    } catch (error) {
+      // Redirecionar para o detalhe
+      navigate(`/lec/${novaEntradaId}`, { replace: true })
+    } catch (error: any) {
       toast({
         title: "Erro ao criar entrada",
-        description: "Ocorreu um erro. Tente novamente.",
+        description: error.message || "Ocorreu um erro. Tente novamente.",
         variant: "destructive"
       })
     } finally {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
+import { useListaEsperaCirurgica } from "@/hooks/useListaEsperaCirurgica"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -63,13 +64,26 @@ export default function EditarEntrada() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { getEntrada, updateEntrada } = useListaEsperaCirurgica()
   
   // Hooks para busca incremental
   const { result: especialidadesResult, searchEspecialidades } = useEspecialidadesSearch()
   const { result: procedimentosResult, searchProcedimentos } = useProcedimentosSearch()
   const { result: profissionaisResult, searchProfissionais } = useProfissionaisSearch()
   
-  const [formData, setFormData] = useState<FormData>(mockEntradaExistente)
+  const [formData, setFormData] = useState<FormData>({
+    especialidadeId: "",
+    procedimentoId: "",
+    prontuario: "",
+    pacienteData: null,
+    medicoId: "",
+    prioridade: "SEM",
+    medidaJudicial: false,
+    situacao: "",
+    observacoes: "",
+    dataNovoContato: undefined,
+    motivoAlteracao: ""
+  })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -78,21 +92,49 @@ export default function EditarEntrada() {
   const [isSuperUser] = useState(false)
 
   useEffect(() => {
-    // Simular carregamento dos dados
-    const timer = setTimeout(() => {
-      setFormData(mockEntradaExistente)
-      setLoading(false)
+    const carregarEntrada = async () => {
+      if (!id) return
       
-      // Carregar dados iniciais nos selects
-      searchEspecialidades("", 0, true)
-      searchProfissionais("", 0, true)
-      if (mockEntradaExistente.especialidadeId) {
-        searchProcedimentos("", mockEntradaExistente.especialidadeId, 0, true)
+      try {
+        setLoading(true)
+        const entrada = await getEntrada(id)
+        
+        if (entrada) {
+          setFormData({
+            especialidadeId: entrada.especialidadeId,
+            procedimentoId: entrada.procedimentoId,
+            prontuario: entrada.paciente.prontuario,
+            pacienteData: entrada.paciente,
+            medicoId: entrada.medicoId,
+            prioridade: entrada.oncologico ? "ONC" : entrada.urgencia ? "BRE" : "SEM",
+            medidaJudicial: entrada.ordemJudicial,
+            situacao: "", // Será mapeado conforme necessário
+            observacoes: entrada.observacoes || "",
+            dataNovoContato: undefined, // Será mapeado conforme necessário
+            motivoAlteracao: ""
+          })
+          
+          // Carregar dados iniciais nos selects
+          searchEspecialidades("", 0, true)
+          searchProfissionais("", 0, true)
+          if (entrada.especialidadeId) {
+            searchProcedimentos("", entrada.especialidadeId, 0, true)
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao carregar entrada:', error)
+        toast({
+          title: "Erro ao carregar dados",
+          description: "Não foi possível carregar os dados da entrada.",
+          variant: "destructive"
+        })
+      } finally {
+        setLoading(false)
       }
-    }, 800)
+    }
 
-    return () => clearTimeout(timer)
-  }, [id, searchEspecialidades, searchProfissionais, searchProcedimentos])
+    carregarEntrada()
+  }, [id, getEntrada, searchEspecialidades, searchProfissionais, searchProcedimentos, toast])
 
   // Validação do formulário
   const validarFormulario = (): boolean => {
@@ -116,11 +158,21 @@ export default function EditarEntrada() {
       return
     }
 
+    if (!id) return
+
     setSaving(true)
 
     try {
-      // Simular chamada API
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      await updateEntrada(id, {
+        cod_especialidade: parseInt(formData.especialidadeId),
+        cod_procedimento: parseInt(formData.procedimentoId),
+        matricula_medico: formData.medicoId ? parseInt(formData.medicoId) : undefined,
+        prioridade: formData.prioridade,
+        medida_judicial: formData.medidaJudicial,
+        situacao: formData.situacao as any,
+        observacoes: formData.observacoes || undefined,
+        data_novo_contato: formData.dataNovoContato ? format(formData.dataNovoContato, 'yyyy-MM-dd') : undefined
+      })
       
       toast({
         title: "Entrada atualizada com sucesso",
@@ -129,10 +181,10 @@ export default function EditarEntrada() {
 
       // Redirecionar para o detalhe
       navigate(`/lec/${id}`, { replace: true })
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Erro ao atualizar entrada",
-        description: "Ocorreu um erro. Tente novamente.",
+        description: error.message || "Ocorreu um erro. Tente novamente.",
         variant: "destructive"
       })
     } finally {
